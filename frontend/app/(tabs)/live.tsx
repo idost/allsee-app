@@ -57,8 +57,12 @@ export default function LiveScreen() {
       const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
       const payload = { user_id: "demo-user", lat: pos.coords.latitude, lng: pos.coords.longitude, privacy_mode: privacy, device_camera: camera };
       const data = await apiPost<StreamResp>("/api/streams", payload);
-      setActiveStream({ id: data.id, event_id: (data as any).event_id, status: data.status });
-      Alert.alert("Live!", `Stream started. ID: ${data.id}`);
+      setActiveStream(data);
+      if (data.rtmp_ingest_url && data.rtmp_stream_key) {
+        Alert.alert("Stream Created!", "Use a broadcasting app like Larix to go live with the RTMP credentials below.");
+      } else {
+        Alert.alert("Live!", `Stream started. ID: ${data.id}`);
+      }
     } catch (e: any) {
       const msg = e?.message ? `Failed: ${e.message}` : "Failed to start stream";
       Alert.alert("Error", msg);
