@@ -1,7 +1,12 @@
 import { create } from "zustand";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-export type POV = { id: string; user_id: string; playback_url?: string | null };
+export type POV = { 
+  id: string; 
+  user_id: string; 
+  playback_url?: string | null;
+  livepeer_playback_id?: string | null;
+};
 
 type ViewerState = {
   activeEventId: string | null;
