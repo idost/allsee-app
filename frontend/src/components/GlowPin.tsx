@@ -35,7 +35,6 @@ export default function GlowPin({ color = "#00D1FF", size = 16 }: { color?: stri
           backgroundColor: color,
           opacity,
           transform: [{ scale }],
-          filter: "blur(4px)" as any,
         }}
       />
       <View style={[styles.core, { width: size, height: size, borderRadius: size / 2, backgroundColor: color }]} />
