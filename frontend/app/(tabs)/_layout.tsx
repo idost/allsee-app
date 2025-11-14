@@ -9,6 +9,7 @@ const TAB_INACTIVE = "#A0A0A0";
 export default function TabsLayout() {
   return (
     <Tabs
+      initialRouteName="map"
       screenOptions={{
         headerShown: false,
         tabBarStyle: { backgroundColor: TAB_BG, borderTopColor: "#1A1A1A" },
@@ -17,7 +18,7 @@ export default function TabsLayout() {
       }}
     >
       <Tabs.Screen
-        name="index"
+        name="map"
         options={{
           title: "Map",
           tabBarIcon: ({ color, size }) => (
