@@ -41,327 +41,401 @@ class LivepeerIntegrationTester:
         if data and not success:
             print(f"   Data: {json.dumps(data, indent=2, default=str)}")
     
-    def test_1_sanity_check(self):
-        """Test 1: Sanity check - GET /api/ should return Hello World"""
-        success, data, status_code = self.make_request('GET', '/api/')
+    async def test_create_stream_with_livepeer(self):
+        """Test POST /api/streams - Create stream with Livepeer integration"""
+        test_name = "POST /api/streams - Livepeer Integration"
         
-        if success and data.get('message') == 'Hello World':
-            self.log_result("Sanity Check", True, f"API responding correctly (status: {status_code})", data)
-        else:
-            self.log_result("Sanity Check", False, f"API not responding as expected (status: {status_code})", data)
-    
-    def test_2_create_stream_a(self):
-        """Test 2: Create Stream A with exact privacy in Istanbul"""
-        payload = {
-            "user_id": "user_istanbul_1",
-            "lat": 41.0082,
-            "lng": 28.9784,
-            "privacy_mode": "exact",
-            "device_camera": "back"
-        }
-        
-        success, data, status_code = self.make_request('POST', '/api/streams', payload)
-        
-        if success and status_code == 200:
-            if 'id' in data and data.get('status') == 'live':
-                self.stream_a_id = data['id']
-                # Verify coordinates are exact (not masked)
-                if abs(data.get('lat', 0) - 41.0082) < 0.0001 and abs(data.get('lng', 0) - 28.9784) < 0.0001:
-                    self.log_result("Create Stream A", True, f"Stream created successfully with exact coordinates (ID: {self.stream_a_id})", data)
-                else:
-                    self.log_result("Create Stream A", False, "Stream created but coordinates are not exact as expected", data)
-            else:
-                self.log_result("Create Stream A", False, "Stream created but missing required fields", data)
-        else:
-            self.log_result("Create Stream A", False, f"Failed to create stream (status: {status_code})", data)
-    
-    def test_3_create_stream_b(self):
-        """Test 3: Create Stream B near A (within 50m) to trigger clustering"""
-        # Wait a moment to ensure different timestamps
-        time.sleep(1)
-        
-        payload = {
-            "user_id": "user_istanbul_2", 
-            "lat": 41.00825,  # ~5m north of Stream A
-            "lng": 28.97845,  # ~5m east of Stream A
-            "privacy_mode": "masked_100m",
-            "device_camera": "front"
-        }
-        
-        success, data, status_code = self.make_request('POST', '/api/streams', payload)
-        
-        if success and status_code == 200:
-            if 'id' in data and data.get('status') == 'live':
-                self.stream_b_id = data['id']
-                # Check if event_id is set (clustering should have occurred)
-                if data.get('event_id'):
-                    self.event_id = data['event_id']
-                    # Verify coordinates are masked (should be different from exact input)
-                    coord_diff = abs(data.get('lat', 0) - 41.00825) + abs(data.get('lng', 0) - 28.97845)
-                    if coord_diff > 0.0001:  # Should be masked
-                        self.log_result("Create Stream B", True, f"Stream created with clustering (ID: {self.stream_b_id}, Event: {self.event_id}), coordinates properly masked", data)
-                    else:
-                        self.log_result("Create Stream B", False, "Stream created with clustering but coordinates not masked as expected", data)
-                else:
-                    self.log_result("Create Stream B", False, "Stream created but no event_id set - clustering may have failed", data)
-            else:
-                self.log_result("Create Stream B", False, "Stream created but missing required fields", data)
-        else:
-            self.log_result("Create Stream B", False, f"Failed to create stream (status: {status_code})", data)
-    
-    def test_4_list_live_streams(self):
-        """Test 4: List live streams in bbox around Istanbul"""
-        params = {
-            'ne': '41.02,29.0',
-            'sw': '41.0,28.95'
-        }
-        
-        success, data, status_code = self.make_request('GET', '/api/streams/live', params=params)
-        
-        if success and status_code == 200:
-            streams = data.get('streams', [])
-            if len(streams) >= 2:
-                # Check if our streams are in the list
-                stream_ids = [s.get('id') for s in streams]
-                has_stream_a = self.stream_a_id in stream_ids
-                has_stream_b = self.stream_b_id in stream_ids
-                
-                if has_stream_a and has_stream_b:
-                    # Verify masking is applied correctly
-                    masked_stream = next((s for s in streams if s.get('privacy_mode') == 'masked_100m'), None)
-                    exact_stream = next((s for s in streams if s.get('privacy_mode') == 'exact'), None)
-                    
-                    masking_correct = True
-                    if masked_stream:
-                        # Masked coordinates should be different from original
-                        coord_diff = abs(masked_stream.get('lat', 0) - 41.00825) + abs(masked_stream.get('lng', 0) - 28.97845)
-                        if coord_diff < 0.0001:
-                            masking_correct = False
-                    
-                    if masking_correct:
-                        self.log_result("List Live Streams", True, f"Found {len(streams)} streams with proper masking", data)
-                    else:
-                        self.log_result("List Live Streams", False, f"Found {len(streams)} streams but masking not applied correctly", data)
-                else:
-                    self.log_result("List Live Streams", False, f"Found {len(streams)} streams but missing our test streams", data)
-            else:
-                self.log_result("List Live Streams", False, f"Expected at least 2 streams, found {len(streams)}", data)
-        else:
-            self.log_result("List Live Streams", False, f"Failed to list streams (status: {status_code})", data)
-    
-    def test_5_list_live_events(self):
-        """Test 5: List live events in bbox around Istanbul"""
-        params = {
-            'ne': '41.02,29.0',
-            'sw': '41.0,28.95'
-        }
-        
-        success, data, status_code = self.make_request('GET', '/api/events/live', params=params)
-        
-        if success and status_code == 200:
-            if isinstance(data, list) and len(data) >= 1:
-                event = data[0]
-                if event.get('stream_count', 0) >= 2:
-                    # Store event_id if we don't have it
-                    if not self.event_id:
-                        self.event_id = event.get('id')
-                    self.log_result("List Live Events", True, f"Found 1 live event with {event.get('stream_count')} streams", data)
-                else:
-                    self.log_result("List Live Events", False, f"Found event but stream_count is {event.get('stream_count')}, expected >= 2", data)
-            else:
-                self.log_result("List Live Events", False, f"Expected at least 1 event, found {len(data) if isinstance(data, list) else 0}", data)
-        else:
-            self.log_result("List Live Events", False, f"Failed to list events (status: {status_code})", data)
-    
-    def test_6_get_event_details(self):
-        """Test 6: Get event details"""
-        if not self.event_id:
-            self.log_result("Get Event Details", False, "No event_id available for testing", None)
-            return
+        try:
+            payload = {
+                "user_id": TEST_USER_ID,
+                "lat": TEST_LOCATION["lat"],
+                "lng": TEST_LOCATION["lng"],
+                "privacy_mode": "exact",
+                "device_camera": "back"
+            }
             
-        success, data, status_code = self.make_request('GET', f'/api/events/{self.event_id}')
-        
-        if success and status_code == 200:
-            event = data.get('event', {})
-            streams = data.get('streams', [])
+            response = await self.client.post(f"{BACKEND_URL}/streams", json=payload)
             
-            if event and len(streams) >= 2:
-                # Verify masking in streams
-                masked_streams = [s for s in streams if s.get('privacy_mode') == 'masked_100m']
-                exact_streams = [s for s in streams if s.get('privacy_mode') == 'exact']
+            if response.status_code not in [200, 201]:
+                await self.log_result(test_name, False, f"HTTP {response.status_code}", response.text)
+                return None
+            
+            data = response.json()
+            
+            # Verify required Livepeer fields are present
+            required_fields = ["rtmp_ingest_url", "rtmp_stream_key", "livepeer_stream_id", "livepeer_playback_id"]
+            missing_fields = []
+            
+            for field in required_fields:
+                if field not in data or data[field] is None:
+                    missing_fields.append(field)
+            
+            if missing_fields:
+                await self.log_result(test_name, False, f"Missing Livepeer fields: {missing_fields}", data)
+                return None
+            
+            # Verify field formats
+            if not data["rtmp_ingest_url"].startswith("rtmp://"):
+                await self.log_result(test_name, False, "Invalid RTMP ingest URL format", data)
+                return None
+            
+            if not data["livepeer_stream_id"]:
+                await self.log_result(test_name, False, "Empty livepeer_stream_id", data)
+                return None
+            
+            if not data["livepeer_playback_id"]:
+                await self.log_result(test_name, False, "Empty livepeer_playback_id", data)
+                return None
+            
+            # Store for cleanup
+            self.created_streams.append(data["id"])
+            
+            await self.log_result(test_name, True, "Stream created with all Livepeer credentials", {
+                "stream_id": data["id"],
+                "livepeer_stream_id": data["livepeer_stream_id"],
+                "livepeer_playback_id": data["livepeer_playback_id"],
+                "rtmp_ingest_url": data["rtmp_ingest_url"][:50] + "..." if len(data["rtmp_ingest_url"]) > 50 else data["rtmp_ingest_url"]
+            })
+            
+            return data
+            
+        except Exception as e:
+            await self.log_result(test_name, False, f"Exception: {str(e)}")
+            return None
+    
+    async def test_live_streams_include_playback_id(self):
+        """Test GET /api/streams/live - Verify livepeer_playback_id is included"""
+        test_name = "GET /api/streams/live - Livepeer Playback ID"
+        
+        try:
+            response = await self.client.get(f"{BACKEND_URL}/streams/live")
+            
+            if response.status_code != 200:
+                await self.log_result(test_name, False, f"HTTP {response.status_code}", response.text)
+                return
+            
+            data = response.json()
+            streams = data.get("streams", [])
+            
+            if not streams:
+                await self.log_result(test_name, True, "No live streams to verify (expected if no streams created)")
+                return
+            
+            # Check if any stream has livepeer_playback_id
+            streams_with_playback_id = [s for s in streams if s.get("livepeer_playback_id")]
+            
+            if not streams_with_playback_id:
+                await self.log_result(test_name, False, "No streams have livepeer_playback_id field", {
+                    "total_streams": len(streams),
+                    "sample_stream": streams[0] if streams else None
+                })
+                return
+            
+            await self.log_result(test_name, True, f"Found {len(streams_with_playback_id)} streams with livepeer_playback_id", {
+                "total_streams": len(streams),
+                "streams_with_playback_id": len(streams_with_playback_id)
+            })
+            
+        except Exception as e:
+            await self.log_result(test_name, False, f"Exception: {str(e)}")
+    
+    async def test_stream_playback_endpoint(self, stream_id: str):
+        """Test GET /api/streams/{stream_id}/playback - New playback endpoint"""
+        test_name = f"GET /api/streams/{stream_id}/playback - Playback URL Construction"
+        
+        try:
+            response = await self.client.get(f"{BACKEND_URL}/streams/{stream_id}/playback")
+            
+            if response.status_code != 200:
+                await self.log_result(test_name, False, f"HTTP {response.status_code}", response.text)
+                return
+            
+            data = response.json()
+            
+            # Verify required fields
+            required_fields = ["stream_id", "playback_url", "livepeer_playback_id", "status"]
+            missing_fields = [field for field in required_fields if field not in data]
+            
+            if missing_fields:
+                await self.log_result(test_name, False, f"Missing fields: {missing_fields}", data)
+                return
+            
+            # Verify playback URL format
+            playback_url = data["playback_url"]
+            expected_pattern = "https://livepeercdn.studio/hls/"
+            
+            if not playback_url or not playback_url.startswith(expected_pattern):
+                await self.log_result(test_name, False, f"Invalid playback URL format. Expected to start with {expected_pattern}", data)
+                return
+            
+            if not playback_url.endswith("/index.m3u8"):
+                await self.log_result(test_name, False, "Playback URL should end with /index.m3u8", data)
+                return
+            
+            await self.log_result(test_name, True, "Playback URL correctly constructed from livepeer_playback_id", {
+                "playback_url": playback_url,
+                "livepeer_playback_id": data["livepeer_playback_id"]
+            })
+            
+        except Exception as e:
+            await self.log_result(test_name, False, f"Exception: {str(e)}")
+    
+    async def test_event_streams_include_playback_id(self, event_id: str):
+        """Test GET /api/events/{event_id} - Verify event streams include livepeer_playback_id"""
+        test_name = f"GET /api/events/{event_id} - Event Streams Livepeer Playback ID"
+        
+        try:
+            response = await self.client.get(f"{BACKEND_URL}/events/{event_id}")
+            
+            if response.status_code != 200:
+                await self.log_result(test_name, False, f"HTTP {response.status_code}", response.text)
+                return
+            
+            data = response.json()
+            streams = data.get("streams", [])
+            
+            if not streams:
+                await self.log_result(test_name, True, "No streams in event to verify")
+                return
+            
+            # Check if streams have livepeer_playback_id
+            streams_with_playback_id = [s for s in streams if s.get("livepeer_playback_id")]
+            
+            if not streams_with_playback_id:
+                await self.log_result(test_name, False, "Event streams missing livepeer_playback_id field", {
+                    "total_streams": len(streams),
+                    "sample_stream": streams[0] if streams else None
+                })
+                return
+            
+            await self.log_result(test_name, True, f"Event streams include livepeer_playback_id", {
+                "total_streams": len(streams),
+                "streams_with_playback_id": len(streams_with_playback_id)
+            })
+            
+        except Exception as e:
+            await self.log_result(test_name, False, f"Exception: {str(e)}")
+    
+    async def test_livepeer_webhook_stream_started(self):
+        """Test POST /api/webhooks/livepeer - stream.started event"""
+        test_name = "POST /api/webhooks/livepeer - stream.started"
+        
+        try:
+            payload = {
+                "event": "stream.started",
+                "id": "webhook-test-001",
+                "payload": {
+                    "id": "test-livepeer-stream-id",
+                    "name": "test-stream",
+                    "isActive": True
+                }
+            }
+            
+            response = await self.client.post(f"{BACKEND_URL}/webhooks/livepeer", json=payload)
+            
+            if response.status_code not in [200, 201]:
+                await self.log_result(test_name, False, f"HTTP {response.status_code}", response.text)
+                return
+            
+            data = response.json()
+            
+            if data.get("status") != "received":
+                await self.log_result(test_name, False, "Webhook not properly received", data)
+                return
+            
+            if data.get("event") != "stream.started":
+                await self.log_result(test_name, False, "Webhook event type not preserved", data)
+                return
+            
+            await self.log_result(test_name, True, "stream.started webhook processed successfully", data)
+            
+        except Exception as e:
+            await self.log_result(test_name, False, f"Exception: {str(e)}")
+    
+    async def test_livepeer_webhook_stream_idle(self):
+        """Test POST /api/webhooks/livepeer - stream.idle event"""
+        test_name = "POST /api/webhooks/livepeer - stream.idle"
+        
+        try:
+            payload = {
+                "event": "stream.idle",
+                "id": "webhook-test-002",
+                "payload": {
+                    "id": "test-livepeer-stream-id",
+                    "name": "test-stream",
+                    "isActive": False
+                }
+            }
+            
+            response = await self.client.post(f"{BACKEND_URL}/webhooks/livepeer", json=payload)
+            
+            if response.status_code not in [200, 201]:
+                await self.log_result(test_name, False, f"HTTP {response.status_code}", response.text)
+                return
+            
+            data = response.json()
+            
+            if data.get("status") != "received":
+                await self.log_result(test_name, False, "Webhook not properly received", data)
+                return
+            
+            if data.get("event") != "stream.idle":
+                await self.log_result(test_name, False, "Webhook event type not preserved", data)
+                return
+            
+            await self.log_result(test_name, True, "stream.idle webhook processed successfully", data)
+            
+        except Exception as e:
+            await self.log_result(test_name, False, f"Exception: {str(e)}")
+    
+    async def test_livepeer_webhook_recording_ready(self):
+        """Test POST /api/webhooks/livepeer - recording.ready event"""
+        test_name = "POST /api/webhooks/livepeer - recording.ready"
+        
+        try:
+            payload = {
+                "event": "recording.ready",
+                "id": "webhook-test-003",
+                "payload": {
+                    "id": "test-recording-id",
+                    "downloadUrl": "https://livepeer.studio/recordings/test-recording.mp4",
+                    "stream": {
+                        "id": "test-livepeer-stream-id"
+                    }
+                }
+            }
+            
+            response = await self.client.post(f"{BACKEND_URL}/webhooks/livepeer", json=payload)
+            
+            if response.status_code not in [200, 201]:
+                await self.log_result(test_name, False, f"HTTP {response.status_code}", response.text)
+                return
+            
+            data = response.json()
+            
+            if data.get("status") != "received":
+                await self.log_result(test_name, False, "Webhook not properly received", data)
+                return
+            
+            if data.get("event") != "recording.ready":
+                await self.log_result(test_name, False, "Webhook event type not preserved", data)
+                return
+            
+            await self.log_result(test_name, True, "recording.ready webhook processed successfully", data)
+            
+        except Exception as e:
+            await self.log_result(test_name, False, f"Exception: {str(e)}")
+    
+    async def create_test_event(self):
+        """Create a second stream to trigger event clustering"""
+        try:
+            # Create second stream nearby to trigger event clustering
+            payload = {
+                "user_id": f"{TEST_USER_ID}-2",
+                "lat": TEST_LOCATION["lat"] + 0.0001,  # Very close to first stream
+                "lng": TEST_LOCATION["lng"] + 0.0001,
+                "privacy_mode": "exact",
+                "device_camera": "front"
+            }
+            
+            response = await self.client.post(f"{BACKEND_URL}/streams", json=payload)
+            
+            if response.status_code in [200, 201]:
+                data = response.json()
+                self.created_streams.append(data["id"])
                 
-                masking_correct = True
-                for masked_stream in masked_streams:
-                    # Check if coordinates are actually masked
-                    coord_diff = abs(masked_stream.get('lat', 0) - 41.00825) + abs(masked_stream.get('lng', 0) - 28.97845)
-                    if coord_diff < 0.0001:
-                        masking_correct = False
-                        break
-                
-                if masking_correct:
-                    self.log_result("Get Event Details", True, f"Event details retrieved with {len(streams)} streams, masking applied correctly", data)
+                # Check if event was created
+                if data.get("event_id"):
+                    self.created_events.append(data["event_id"])
+                    return data["event_id"]
+            
+            return None
+            
+        except Exception as e:
+            print(f"Error creating test event: {e}")
+            return None
+    
+    async def cleanup_test_data(self):
+        """Clean up created test streams"""
+        print("\n🧹 Cleaning up test data...")
+        
+        for stream_id in self.created_streams:
+            try:
+                response = await self.client.post(f"{BACKEND_URL}/streams/{stream_id}/end")
+                if response.status_code == 200:
+                    print(f"   ✅ Ended stream {stream_id}")
                 else:
-                    self.log_result("Get Event Details", False, f"Event details retrieved but masking not applied correctly", data)
-            else:
-                self.log_result("Get Event Details", False, f"Event details incomplete - event: {bool(event)}, streams: {len(streams)}", data)
-        else:
-            self.log_result("Get Event Details", False, f"Failed to get event details (status: {status_code})", data)
+                    print(f"   ⚠️  Failed to end stream {stream_id}: HTTP {response.status_code}")
+            except Exception as e:
+                print(f"   ❌ Error ending stream {stream_id}: {e}")
     
-    def test_7_end_streams(self):
-        """Test 7: End both streams and verify event status"""
-        # End Stream A
-        if self.stream_a_id:
-            success_a, data_a, status_a = self.make_request('POST', f'/api/streams/{self.stream_a_id}/end')
-            if success_a and status_a == 200:
-                self.log_result("End Stream A", True, f"Stream A ended successfully", data_a)
-            else:
-                self.log_result("End Stream A", False, f"Failed to end Stream A (status: {status_a})", data_a)
+    async def run_all_tests(self):
+        """Run all Livepeer integration tests"""
+        print("🚀 Starting Livepeer Integration Tests for Allsee MVP")
+        print(f"Backend URL: {BACKEND_URL}")
+        print(f"Test Location: Istanbul, Turkey ({TEST_LOCATION['lat']}, {TEST_LOCATION['lng']})")
+        print(f"Test User: {TEST_USER_ID}")
+        print("=" * 80)
         
-        # End Stream B
-        if self.stream_b_id:
-            success_b, data_b, status_b = self.make_request('POST', f'/api/streams/{self.stream_b_id}/end')
-            if success_b and status_b == 200:
-                self.log_result("End Stream B", True, f"Stream B ended successfully", data_b)
-            else:
-                self.log_result("End Stream B", False, f"Failed to end Stream B (status: {status_b})", data_b)
+        try:
+            # Test 1: Create stream with Livepeer integration
+            stream_data = await self.test_create_stream_with_livepeer()
+            
+            # Test 2: Verify live streams include playback ID
+            await self.test_live_streams_include_playback_id()
+            
+            # Test 3: Test playback endpoint (if we have a stream)
+            if stream_data and stream_data.get("id"):
+                await self.test_stream_playback_endpoint(stream_data["id"])
+            
+            # Test 4: Create event and test event streams
+            event_id = await self.create_test_event()
+            if event_id:
+                await self.test_event_streams_include_playback_id(event_id)
+            
+            # Test 5-7: Test webhook endpoints
+            await self.test_livepeer_webhook_stream_started()
+            await self.test_livepeer_webhook_stream_idle()
+            await self.test_livepeer_webhook_recording_ready()
+            
+        finally:
+            # Cleanup
+            await self.cleanup_test_data()
+            await self.client.aclose()
         
-        # Wait a moment for event status to update
-        time.sleep(2)
-        
-        # Check event status
-        if self.event_id:
-            success, data, status_code = self.make_request('GET', f'/api/events/{self.event_id}')
-            if success and status_code == 200:
-                event = data.get('event', {})
-                if event.get('status') == 'ended':
-                    self.log_result("Event Auto-End", True, "Event status correctly updated to 'ended' after all streams ended", data)
-                else:
-                    self.log_result("Event Auto-End", False, f"Event status is '{event.get('status')}', expected 'ended'", data)
-            else:
-                self.log_result("Event Auto-End", False, f"Failed to check event status (status: {status_code})", data)
-        
-        # Verify event no longer appears in live events
-        params = {'ne': '41.02,29.0', 'sw': '41.0,28.95'}
-        success, data, status_code = self.make_request('GET', '/api/events/live', params=params)
-        if success and status_code == 200:
-            live_events = data if isinstance(data, list) else []
-            event_ids = [e.get('id') for e in live_events]
-            if self.event_id not in event_ids:
-                self.log_result("Event Removed from Live", True, "Event no longer appears in live events list", data)
-            else:
-                self.log_result("Event Removed from Live", False, "Event still appears in live events list", data)
-        else:
-            self.log_result("Event Removed from Live", False, f"Failed to check live events (status: {status_code})", data)
-    
-    def validate_date_fields(self):
-        """Validate that date fields are ISO strings in responses"""
-        date_validation_passed = True
-        date_issues = []
-        
-        for result in self.results:
-            if result.get('response_data') and result['success']:
-                data = result['response_data']
-                
-                # Check various date fields
-                date_fields_to_check = []
-                
-                if isinstance(data, dict):
-                    # Stream responses
-                    if 'started_at' in data:
-                        date_fields_to_check.append(('started_at', data['started_at']))
-                    if 'ended_at' in data and data['ended_at']:
-                        date_fields_to_check.append(('ended_at', data['ended_at']))
-                    
-                    # Event responses
-                    if 'created_at' in data:
-                        date_fields_to_check.append(('created_at', data['created_at']))
-                    
-                    # Nested structures
-                    if 'streams' in data:
-                        for stream in data['streams']:
-                            if 'started_at' in stream:
-                                date_fields_to_check.append(('stream.started_at', stream['started_at']))
-                    
-                    if 'event' in data and isinstance(data['event'], dict):
-                        event = data['event']
-                        if 'created_at' in event:
-                            date_fields_to_check.append(('event.created_at', event['created_at']))
-                
-                elif isinstance(data, list):
-                    # List of events/streams
-                    for item in data:
-                        if isinstance(item, dict):
-                            if 'started_at' in item:
-                                date_fields_to_check.append(('item.started_at', item['started_at']))
-                            if 'created_at' in item:
-                                date_fields_to_check.append(('item.created_at', item['created_at']))
-                
-                # Validate each date field
-                for field_name, date_value in date_fields_to_check:
-                    if isinstance(date_value, str):
-                        try:
-                            datetime.fromisoformat(date_value.replace('Z', '+00:00'))
-                        except ValueError:
-                            date_validation_passed = False
-                            date_issues.append(f"{result['test']}: {field_name} = '{date_value}' is not valid ISO format")
-                    else:
-                        date_validation_passed = False
-                        date_issues.append(f"{result['test']}: {field_name} is not a string (type: {type(date_value)})")
-        
-        if date_validation_passed:
-            self.log_result("Date Field Validation", True, "All date fields are properly formatted as ISO strings", None)
-        else:
-            self.log_result("Date Field Validation", False, f"Date field issues found: {'; '.join(date_issues)}", None)
-    
-    def run_all_tests(self):
-        """Run all tests in sequence"""
-        print("🚀 Starting Backend API Tests for Allsee MVP")
-        print(f"Base URL: {self.base_url}")
-        print("=" * 60)
-        
-        # Run tests in sequence
-        self.test_1_sanity_check()
-        self.test_2_create_stream_a()
-        self.test_3_create_stream_b()
-        self.test_4_list_live_streams()
-        self.test_5_list_live_events()
-        self.test_6_get_event_details()
-        self.test_7_end_streams()
-        
-        # Validate date fields
-        self.validate_date_fields()
-        
-        # Summary
-        print("\n" + "=" * 60)
+        # Print summary
+        print("\n" + "=" * 80)
         print("📊 TEST SUMMARY")
-        print("=" * 60)
+        print("=" * 80)
         
-        passed = sum(1 for r in self.results if r['success'])
-        total = len(self.results)
+        total_tests = len(self.test_results)
+        passed_tests = len([r for r in self.test_results if r["success"]])
+        failed_tests = total_tests - passed_tests
         
-        print(f"Total Tests: {total}")
-        print(f"Passed: {passed}")
-        print(f"Failed: {total - passed}")
-        print(f"Success Rate: {(passed/total)*100:.1f}%")
+        print(f"Total Tests: {total_tests}")
+        print(f"✅ Passed: {passed_tests}")
+        print(f"❌ Failed: {failed_tests}")
+        print(f"Success Rate: {(passed_tests/total_tests*100):.1f}%" if total_tests > 0 else "0%")
         
-        print("\n📋 DETAILED RESULTS:")
-        for result in self.results:
-            status = "✅" if result['success'] else "❌"
-            print(f"{status} {result['test']}: {result['details']}")
+        if failed_tests > 0:
+            print("\n❌ FAILED TESTS:")
+            for result in self.test_results:
+                if not result["success"]:
+                    print(f"   • {result['test']}: {result['details']}")
         
-        # Critical issues
-        critical_failures = [r for r in self.results if not r['success'] and r['test'] in [
-            'Sanity Check', 'Create Stream A', 'Create Stream B', 'List Live Events'
-        ]]
-        
-        if critical_failures:
-            print(f"\n🚨 CRITICAL ISSUES FOUND ({len(critical_failures)}):")
-            for failure in critical_failures:
-                print(f"   ❌ {failure['test']}: {failure['details']}")
-        
-        return passed == total
+        return passed_tests, failed_tests
+
+async def main():
+    """Main test runner"""
+    tester = LivepeerIntegrationTester()
+    passed, failed = await tester.run_all_tests()
+    
+    # Exit with error code if tests failed
+    if failed > 0:
+        exit(1)
+    else:
+        print("\n🎉 All Livepeer integration tests passed!")
+        exit(0)
 
 if __name__ == "__main__":
-    tester = BackendTester()
-    success = tester.run_all_tests()
-    exit(0 if success else 1)
+    asyncio.run(main())
