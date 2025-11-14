@@ -5,6 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import NativeMap from "../../src/components/NativeMap";
 import { useRouter } from "expo-router";
 import { apiGet } from "../../src/utils/api";
+import TimelineScrubber from "../../src/components/TimelineScrubber";
 
 const COLORS = {
   bg: "#0A0A0A",
@@ -37,10 +38,11 @@ export default function MapRoute() {
   const [error, setError] = useState<string | null>(null);
   const lastRegionRef = useRef(DEFAULT_REGION);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [minutesOffset, setMinutesOffset] = useState(0); // 0 = LIVE
 
   const singles = useMemo(() => streams.filter((s) => !s.event_id), [streams]);
 
-  const fetchData = useCallback(async (r = lastRegionRef.current) => {
+  const fetchLive = useCallback(async (r = lastRegionRef.current) => {
     const { ne, sw } = regionToBbox(r);
     const [ev, st] = await Promise.all([
       apiGet<any[]>(`/api/events/live?ne=${encodeURIComponent(ne)}&sw=${encodeURIComponent(sw)}`),
@@ -49,6 +51,22 @@ export default function MapRoute() {
     setEvents(ev);
     setStreams(st.streams ?? []);
   }, []);
+
+  const fetchRange = useCallback(async (r = lastRegionRef.current) => {
+    const { ne, sw } = regionToBbox(r);
+    const now = new Date();
+    const focus = new Date(now.getTime() - minutesOffset * 60 * 1000);
+    const from = new Date(focus.getTime() - 30 * 60 * 1000).toISOString();
+    const to = new Date(focus.getTime() + 30 * 60 * 1000).toISOString();
+    const ev = await apiGet<any[]>(`/api/events/range?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&ne=${encodeURIComponent(ne)}&sw=${encodeURIComponent(sw)}`);
+    setEvents(ev);
+    setStreams([]);
+  }, [minutesOffset]);
+
+  const fetchData = useCallback(async (r = lastRegionRef.current) => {
+    if (minutesOffset === 0) return fetchLive(r);
+    return fetchRange(r);
+  }, [fetchLive, fetchRange, minutesOffset]);
 
   const load = useCallback(async () => {
     try {
@@ -65,9 +83,19 @@ export default function MapRoute() {
   useEffect(() => {
     load();
     intervalRef.current && clearInterval(intervalRef.current);
-    intervalRef.current = setInterval(() => fetchData().catch(() => {}), 4000);
+    intervalRef.current = setInterval(() => {
+      if (minutesOffset === 0) fetchLive().catch(() => {});
+    }, 4000);
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [fetchData, load]);
+  }, [fetchLive, load, minutesOffset]);
+
+  useEffect(() => {
+    if (minutesOffset !== 0) {
+      fetchRange().catch(() => {});
+    } else {
+      fetchLive().catch(() => {});
+    }
+  }, [minutesOffset, fetchLive, fetchRange]);
 
   const onRegionChangeComplete = useCallback((r: any) => {
     lastRegionRef.current = r;
@@ -106,6 +134,10 @@ export default function MapRoute() {
         onPressEvent={onPressEvent}
         onPressStream={onPressStream}
       />
+
+      <View style={styles.timeline}>
+        <TimelineScrubber minutesOffset={minutesOffset} onChange={setMinutesOffset} />
+      </View>
     </SafeAreaView>
   );
 }
@@ -116,4 +148,5 @@ const styles = StyleSheet.create({
   headerText: { color: COLORS.text, fontSize: 18, marginLeft: 8 },
   center: { position: "absolute", top: 48, left: 0, right: 0, alignItems: "center" },
   error: { color: COLORS.danger },
+  timeline: { zIndex: 2, position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: "#00000066" },
 });
