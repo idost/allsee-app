@@ -17,6 +17,7 @@ export default function TabsLayout() {
         tabBarInactiveTintColor: TAB_INACTIVE,
       }}
     >
+      <Tabs.Screen name="index" options={{ href: null }} />
       <Tabs.Screen
         name="map"
         options={{
