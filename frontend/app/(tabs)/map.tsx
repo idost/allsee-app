@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import NativeMap from "../../src/components/NativeMap.native";
+import NativeMap from "../../src/components/NativeMap";
 
 const COLORS = {
   bg: "#0A0A0A",
