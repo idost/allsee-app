@@ -28,6 +28,52 @@ db = client[os.environ['DB_NAME']]
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
+# Livepeer Configuration
+LIVEPEER_API_KEY = os.getenv('LIVEPEER_API_KEY', '')
+LIVEPEER_API_URL = "https://livepeer.studio/api"
+
+class LivepeerClient:
+    """Client for Livepeer Studio API"""
+    def __init__(self, api_key: str):
+        self.api_key = api_key
+        self.base_url = LIVEPEER_API_URL
+        self.headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+    
+    async def create_stream(self, name: str, record: bool = True) -> dict:
+        """Create a new livestream in Livepeer"""
+        async with httpx.AsyncClient() as http_client:
+            payload = {
+                "name": name,
+                "record": record
+            }
+            response = await http_client.post(
+                f"{self.base_url}/stream",
+                json=payload,
+                headers=self.headers,
+                timeout=10.0
+            )
+            if response.status_code not in [200, 201]:
+                logger.error(f"Livepeer create_stream failed: {response.text}")
+                raise HTTPException(status_code=response.status_code, detail=f"Livepeer API error: {response.text}")
+            return response.json()
+    
+    async def get_stream(self, stream_id: str) -> dict:
+        """Get stream details from Livepeer"""
+        async with httpx.AsyncClient() as http_client:
+            response = await http_client.get(
+                f"{self.base_url}/stream/{stream_id}",
+                headers=self.headers,
+                timeout=10.0
+            )
+            if response.status_code != 200:
+                raise HTTPException(status_code=response.status_code, detail="Stream not found in Livepeer")
+            return response.json()
+
+livepeer_client = LivepeerClient(LIVEPEER_API_KEY)
+
 
 def haversine_distance_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     R = 6371000.0
