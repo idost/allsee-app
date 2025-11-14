@@ -101,6 +101,41 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+## backend:
+  - task: "Users & Follows APIs"
+    implemented: true
+    working: NA
+    file: "/app/backend/server.py"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "main"
+        comment: "Added /users, /follows, /users/{id}/profile, /users/{id}/streams"
+  - task: "Events Range API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    needs_retesting: true
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "GET /api/events/range returns events in time window"
+## frontend:
+  - task: "Event Viewer (multi-POV shell)"
+    implemented: true
+    working: NA
+    file: "/app/frontend/app/event/[id].tsx"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "main"
+        comment: "Initial player with POV strip and metadata"
+## test_plan:
+  current_focus:
+    - "Create test streams to form event"
+    - "Verify /api/events/live and /api/events/{id}"
+    - "Open /event/{id} and confirm POV strip renders"
+
 ## frontend:
   - task: "Map tab with live pins & event clusters (web-safe)"
     implemented: true
