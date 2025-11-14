@@ -10,17 +10,29 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "com.allsee.app",
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "We use your location to show nearby live events on the map."
+        "NSLocationWhenInUseUsageDescription": "We use your location to show nearby live events on the map.",
+        "NSCameraUsageDescription": "We need camera access for live streaming.",
+        "NSMicrophoneUsageDescription": "We need microphone access for live streaming audio."
       }
     },
     "android": {
+      "package": "com.allsee.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#000"
       },
       "edgeToEdgeEnabled": true,
-      "permissions": ["ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"]
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "CAMERA",
+        "RECORD_AUDIO",
+        "MODIFY_AUDIO_SETTINGS",
+        "INTERNET",
+        "ACCESS_NETWORK_STATE"
+      ]
     },
     "web": {
       "bundler": "metro",
