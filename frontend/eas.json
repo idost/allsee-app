@@ -6,10 +6,7 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
-      "node": "20.18.0",
-      "env": {
-        "YARN_ENABLE_IMMUTABLE_INSTALLS": "false"
-      },
+      "node": "20.19.4",
       "ios": {
         "resourceClass": "m-medium"
       },
@@ -20,6 +17,7 @@
     },
     "preview": {
       "distribution": "internal",
+      "node": "20.19.4",
       "ios": {
         "resourceClass": "m-medium"
       },
@@ -28,6 +26,7 @@
       }
     },
     "production": {
+      "node": "20.19.4",
       "ios": {
         "resourceClass": "m-medium"
       },
