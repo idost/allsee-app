@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { View, Text, StyleSheet, ActivityIndicator, Platform, RefreshControl, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, ActivityIndicator, Platform, TouchableOpacity, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import type { Region } from "react-native-maps";
