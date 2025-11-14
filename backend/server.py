@@ -134,9 +134,10 @@ class StreamOut(BaseModel):
     status: Literal['live', 'ended'] = 'live'
     privacy_mode: LocationPrivacy = 'exact'
     playback_url: Optional[str] = None
-    # Livepeer RTMP credentials (only returned on stream creation)
+    # Livepeer credentials (only returned on stream creation)
     rtmp_ingest_url: Optional[str] = None
     rtmp_stream_key: Optional[str] = None
+    whip_ingest_url: Optional[str] = None  # WebRTC WHIP for in-app streaming
     livepeer_stream_id: Optional[str] = None
     livepeer_playback_id: Optional[str] = None
 
