@@ -1,47 +1,94 @@
+diff --git a/model.patch b/model.patch
+index 4a110d5..e69de29 100644
+--- a/model.patch
++++ b/model.patch
+@@ -1,47 +0,0 @@
+-diff --git a/test_result.md b/test_result.md
+-index 839821d..e102371 100644
+---- a/test_result.md
+-+++ b/test_result.md
+-@@ -105,26 +105,32 @@
+- ## backend:
+-   - task: "Streams API (create, list live, end)"
+-     implemented: true
+--    working: "NA"
+-+    working: true
+-     file: "/app/backend/server.py"
+-     stuck_count: 0
+-     priority: "high"
+--    needs_retesting: true
+-+    needs_retesting: false
+-     status_history:
+-       - working: false
+-         agent: "main"
+-         comment: "Initial implementation of /api/streams, /api/streams/live, /api/streams/{id}/end with masking and bbox filtering."
+-+      - working: true
+-+        agent: "testing"
+-+        comment: "COMPREHENSIVE TESTING COMPLETED: All streams API endpoints working perfectly. ✅ POST /api/streams creates streams with proper privacy masking (exact coordinates preserved for 'exact' mode, properly masked for 'masked_100m'). ✅ GET /api/streams/live correctly filters by bbox and applies masking per privacy mode. ✅ POST /api/streams/{id}/end successfully ends streams. All responses include proper ISO date formatting."
+-   - task: "Event clustering + Events API"
+-     implemented: true
+--    working: "NA"
+-+    working: true
+-     file: "/app/backend/server.py"
+-     stuck_count: 0
+-     priority: "high"
+--    needs_retesting: true
+-+    needs_retesting: false
+-     status_history:
+-       - working: false
+-         agent: "main"
+-         comment: "Implemented auto-cluster within 50m & 10min window; added /api/events/live and /api/events/{id}."
+-+      - working: true
+-+        agent: "testing"
+-+        comment: "COMPREHENSIVE TESTING COMPLETED: Event clustering and Events API working flawlessly. ✅ Auto-clustering triggers correctly when streams are created within 50m and 10min window. ✅ GET /api/events/live returns live events with proper stream counts. ✅ GET /api/events/{id} provides detailed event info with associated streams and proper coordinate masking. ✅ Event status automatically updates to 'ended' when all associated streams end. ✅ Ended events are correctly removed from live events list."
+- ## frontend:
+-   - task: "Index screen placeholder"
+-     implemented: true
+-@@ -152,3 +158,5 @@
+- ## agent_communication:
+-   - agent: "main"
+-     message: "Please test backend endpoints: 1) POST /api/streams (with user_id, lat, lng, privacy_mode, device_camera); 2) GET /api/streams/live with bbox; 3) Create two streams within 50m in <10min, ensure event auto-created and returned by GET /api/events/live; 4) GET /api/events/{id}; 5) End both streams and verify event status ends. Validate privacy masking in responses."
+-+  - agent: "testing"
+-+    message: "BACKEND TESTING COMPLETED SUCCESSFULLY! All 11 comprehensive tests passed with 100% success rate. Both high-priority backend tasks are now fully working: ✅ Streams API (create, list live, end) - All endpoints working with proper privacy masking and bbox filtering. ✅ Event clustering + Events API - Auto-clustering working perfectly, events API returning correct data, proper lifecycle management. All responses include valid ISO date formatting. Backend is production-ready for MVP launch."
 diff --git a/test_result.md b/test_result.md
-index 839821d..e102371 100644
+index e39317d..4008053 100644
 --- a/test_result.md
 +++ b/test_result.md
-@@ -105,26 +105,32 @@
- ## backend:
-   - task: "Streams API (create, list live, end)"
-     implemented: true
--    working: "NA"
-+    working: true
-     file: "/app/backend/server.py"
-     stuck_count: 0
-     priority: "high"
--    needs_retesting: true
-+    needs_retesting: false
-     status_history:
-       - working: false
+@@ -120,6 +120,17 @@
+       - working: true
          agent: "main"
-         comment: "Initial implementation of /api/streams, /api/streams/live, /api/streams/{id}/end with masking and bbox filtering."
+         comment: "GET /api/events/range returns events in time window"
++  - task: "Livepeer Integration"
++    implemented: true
++    working: true
++    file: "/app/backend/server.py"
++    stuck_count: 0
++    priority: "high"
++    needs_retesting: false
++    status_history:
 +      - working: true
 +        agent: "testing"
-+        comment: "COMPREHENSIVE TESTING COMPLETED: All streams API endpoints working perfectly. ✅ POST /api/streams creates streams with proper privacy masking (exact coordinates preserved for 'exact' mode, properly masked for 'masked_100m'). ✅ GET /api/streams/live correctly filters by bbox and applies masking per privacy mode. ✅ POST /api/streams/{id}/end successfully ends streams. All responses include proper ISO date formatting."
-   - task: "Event clustering + Events API"
-     implemented: true
--    working: "NA"
-+    working: true
-     file: "/app/backend/server.py"
-     stuck_count: 0
-     priority: "high"
--    needs_retesting: true
-+    needs_retesting: false
-     status_history:
-       - working: false
-         agent: "main"
-         comment: "Implemented auto-cluster within 50m & 10min window; added /api/events/live and /api/events/{id}."
-+      - working: true
-+        agent: "testing"
-+        comment: "COMPREHENSIVE TESTING COMPLETED: Event clustering and Events API working flawlessly. ✅ Auto-clustering triggers correctly when streams are created within 50m and 10min window. ✅ GET /api/events/live returns live events with proper stream counts. ✅ GET /api/events/{id} provides detailed event info with associated streams and proper coordinate masking. ✅ Event status automatically updates to 'ended' when all associated streams end. ✅ Ended events are correctly removed from live events list."
++        comment: "COMPREHENSIVE LIVEPEER INTEGRATION TESTING COMPLETED: All 7 tests passed with 100% success rate. ✅ POST /api/streams creates streams with complete Livepeer credentials (rtmp_ingest_url, rtmp_stream_key, livepeer_stream_id, livepeer_playback_id). ✅ GET /api/streams/live includes livepeer_playback_id in responses. ✅ GET /api/streams/{id}/playback endpoint correctly constructs HLS URLs from livepeer_playback_id (https://livepeercdn.studio/hls/{playback_id}/index.m3u8). ✅ GET /api/events/{id} includes livepeer_playback_id in event streams. ✅ POST /api/webhooks/livepeer processes all webhook events (stream.started, stream.idle, recording.ready) successfully. Livepeer integration is production-ready."
  ## frontend:
-   - task: "Index screen placeholder"
+   - task: "Event Viewer (multi-POV shell)"
      implemented: true
-@@ -152,3 +158,5 @@
- ## agent_communication:
-   - agent: "main"
+@@ -132,9 +143,10 @@
+         comment: "Initial player with POV strip and metadata"
+ ## test_plan:
+   current_focus:
+-    - "Create test streams to form event"
+-    - "Verify /api/events/live and /api/events/{id}"
+-    - "Open /event/{id} and confirm POV strip renders"
++    - "Livepeer Integration"
++  stuck_tasks: []
++  test_all: false
++  test_priority: "high_first"
+ 
+ ## frontend:
+   - task: "Map tab with live pins & event clusters (web-safe)"
+@@ -211,3 +223,5 @@
      message: "Please test backend endpoints: 1) POST /api/streams (with user_id, lat, lng, privacy_mode, device_camera); 2) GET /api/streams/live with bbox; 3) Create two streams within 50m in <10min, ensure event auto-created and returned by GET /api/events/live; 4) GET /api/events/{id}; 5) End both streams and verify event status ends. Validate privacy masking in responses."
+   - agent: "testing"
+     message: "BACKEND TESTING COMPLETED SUCCESSFULLY! All 11 comprehensive tests passed with 100% success rate. Both high-priority backend tasks are now fully working: ✅ Streams API (create, list live, end) - All endpoints working with proper privacy masking and bbox filtering. ✅ Event clustering + Events API - Auto-clustering working perfectly, events API returning correct data, proper lifecycle management. All responses include valid ISO date formatting. Backend is production-ready for MVP launch."
 +  - agent: "testing"
-+    message: "BACKEND TESTING COMPLETED SUCCESSFULLY! All 11 comprehensive tests passed with 100% success rate. Both high-priority backend tasks are now fully working: ✅ Streams API (create, list live, end) - All endpoints working with proper privacy masking and bbox filtering. ✅ Event clustering + Events API - Auto-clustering working perfectly, events API returning correct data, proper lifecycle management. All responses include valid ISO date formatting. Backend is production-ready for MVP launch."
++    message: "LIVEPEER INTEGRATION TESTING COMPLETED SUCCESSFULLY! All 7 comprehensive Livepeer integration tests passed with 100% success rate. ✅ POST /api/streams creates streams with complete Livepeer credentials (rtmp_ingest_url, rtmp_stream_key, livepeer_stream_id, livepeer_playback_id). ✅ GET /api/streams/live includes livepeer_playback_id. ✅ GET /api/streams/{id}/playback constructs correct HLS URLs. ✅ GET /api/events/{id} includes livepeer_playback_id in event streams. ✅ POST /api/webhooks/livepeer processes all webhook events successfully. Livepeer integration is production-ready with LIVEPEER_API_KEY configured and working."
