@@ -1,4 +1,4 @@
-export const API_BASE = process.env.EXPO_PUBLIC_BACKEND_URL || "";
+export const API_BASE = process.env.EXPO_BACKEND_URL || "";
 
 function buildUrl(path: string) {
   if (!path.startsWith("/")) path = `/${path}`;
