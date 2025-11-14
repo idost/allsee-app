@@ -137,42 +137,72 @@ export default function MapScreen() {
           <Text style={styles.error}>Error: {error}</Text>
         </View>
       ) : (
-        <MapView
-          style={StyleSheet.absoluteFill}
-          provider={PROVIDER_GOOGLE}
-          initialRegion={region}
-          onRegionChangeComplete={handleRegionChangeComplete}
-          showsUserLocation
-        >
-          {singles.map((s) => (
-            <Marker
-              key={s.id}
-              coordinate={{ latitude: s.lat, longitude: s.lng }}
-              title={`@${s.user_id}`}
-              description={`Live stream`}
-            >
-              <View style={[styles.pin, { backgroundColor: COLORS.blue }]} />
-            </Marker>
-          ))}
-
-          {events.map((e) => {
-            const color = e.stream_count >= 5 ? COLORS.amber : COLORS.violet;
-            return (
-              <Marker
-                key={e.id}
-                coordinate={{ latitude: e.centroid_lat, longitude: e.centroid_lng }}
-                title={`Event`}
-                description={`${e.stream_count} POVs`}
-              >
-                <View style={[styles.cluster, { borderColor: color }]}> 
-                  <View style={[styles.clusterInner, { backgroundColor: color }]}> 
-                    <Text style={styles.clusterText}>{e.stream_count}</Text>
-                  </View>
+        Platform.OS === "web" ? (
+          <View style={{ flex: 1, paddingTop: 48 }}>
+            <View style={{ paddingHorizontal: 16 }}>
+              <Text style={[styles.meta, { marginBottom: 8 }]}>Map is available on iOS/Android. Showing live list on web:</Text>
+            </View>
+            <ScrollView contentContainerStyle={{ padding: 16 }}>
+              {events.map((e) => (
+                <View key={e.id} style={styles.card}> 
+                  <Text style={styles.title}>Event • {e.stream_count} POVs</Text>
+                  <Text style={styles.meta}>Centroid: {e.centroid_lat.toFixed(5)}, {e.centroid_lng.toFixed(5)}</Text>
+                  <Text style={styles.metaSmall}>Created: {new Date(e.created_at).toLocaleString()}</Text>
                 </View>
-              </Marker>
+              ))}
+              {singles.map((s) => (
+                <View key={s.id} style={styles.card}> 
+                  <Text style={styles.title}>Single Stream</Text>
+                  <Text style={styles.meta}>@{s.user_id}</Text>
+                  <Text style={styles.meta}>LatLng: {s.lat.toFixed(5)}, {s.lng.toFixed(5)}</Text>
+                </View>
+              ))}
+            </ScrollView>
+          </View>
+        ) : (
+          (() => {
+            const RNMaps = require("react-native-maps");
+            const MapView = RNMaps.default;
+            const Marker = RNMaps.Marker;
+            return (
+              <MapView
+                style={StyleSheet.absoluteFill}
+                initialRegion={region}
+                onRegionChangeComplete={handleRegionChangeComplete}
+                showsUserLocation
+              >
+                {singles.map((s: any) => (
+                  <Marker
+                    key={s.id}
+                    coordinate={{ latitude: s.lat, longitude: s.lng }}
+                    title={`@${s.user_id}`}
+                    description={`Live stream`}
+                  >
+                    <View style={[styles.pin, { backgroundColor: COLORS.blue }]} />
+                  </Marker>
+                ))}
+
+                {events.map((e: any) => {
+                  const color = e.stream_count >= 5 ? COLORS.amber : COLORS.violet;
+                  return (
+                    <Marker
+                      key={e.id}
+                      coordinate={{ latitude: e.centroid_lat, longitude: e.centroid_lng }}
+                      title={`Event`}
+                      description={`${e.stream_count} POVs`}
+                    >
+                      <View style={[styles.cluster, { borderColor: color }]}> 
+                        <View style={[styles.clusterInner, { backgroundColor: color }]}> 
+                          <Text style={styles.clusterText}>{e.stream_count}</Text>
+                        </View>
+                      </View>
+                    </Marker>
+                  );
+                })}
+              </MapView>
             );
-          })}
-        </MapView>
+          })()
+        )
       )}
 
       <View style={styles.footer}>
