@@ -372,6 +372,7 @@ async def create_stream(payload: StreamCreate):
     rtmp_stream_key = None
     livepeer_stream_id = None
     livepeer_playback_id = None
+    whip_ingest_url = None
     
     try:
         if LIVEPEER_API_KEY:
@@ -381,6 +382,8 @@ async def create_stream(payload: StreamCreate):
             rtmp_stream_key = livepeer_stream.get('streamKey')
             rtmp_ingest_url = f"rtmp://{livepeer_stream.get('rtmpIngestUrl', 'rtmp.livepeer.com/live')}"
             livepeer_playback_id = livepeer_stream.get('playbackId')
+            # WebRTC WHIP ingest URL for in-app streaming
+            whip_ingest_url = f"https://playback.livepeer.studio/webrtc/{rtmp_stream_key}"
             logger.info(f"Created Livepeer stream {livepeer_stream_id} for {stream_id}")
     except Exception as e:
         logger.error(f"Failed to create Livepeer stream: {e}")
