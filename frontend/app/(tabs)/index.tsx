@@ -2,8 +2,15 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { View, Text, StyleSheet, ActivityIndicator, Platform, TouchableOpacity, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import type { Region } from "react-native-maps";
 import * as Location from "expo-location";
+
+// Local Region type to avoid importing react-native-maps on web
+type Region = {
+  latitude: number;
+  longitude: number;
+  latitudeDelta: number;
+  longitudeDelta: number;
+};
 
 const COLORS = {
   bg: "#0A0A0A",
