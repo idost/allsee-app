@@ -101,3 +101,54 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+## user_problem_statement: "Build Allsee MVP: backend streams/events with clustering; basic Expo app shell; map-first later"
+## backend:
+  - task: "Streams API (create, list live, end)"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "main"
+        comment: "Initial implementation of /api/streams, /api/streams/live, /api/streams/{id}/end with masking and bbox filtering."
+  - task: "Event clustering + Events API"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "main"
+        comment: "Implemented auto-cluster within 50m & 10min window; added /api/events/live and /api/events/{id}."
+## frontend:
+  - task: "Index screen placeholder"
+    implemented: true
+    working: true
+    file: "/app/frontend/app/index.tsx"
+    stuck_count: 0
+    priority: "low"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Initial landing image present. Will add tab nav and map after backend verified."
+## metadata:
+  created_by: "main_agent"
+  version: "1.0"
+  test_sequence: 1
+  run_ui: false
+## test_plan:
+  current_focus:
+    - "Streams API (create, list live, end)"
+    - "Event clustering + Events API"
+  stuck_tasks: []
+  test_all: false
+  test_priority: "high_first"
+## agent_communication:
+  - agent: "main"
+    message: "Please test backend endpoints: 1) POST /api/streams (with user_id, lat, lng, privacy_mode, device_camera); 2) GET /api/streams/live with bbox; 3) Create two streams within 50m in <10min, ensure event auto-created and returned by GET /api/events/live; 4) GET /api/events/{id}; 5) End both streams and verify event status ends. Validate privacy masking in responses."
