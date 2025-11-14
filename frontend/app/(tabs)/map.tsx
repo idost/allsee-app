@@ -5,6 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import NativeMap from "../../src/components/NativeMap";
 import { useRouter } from "expo-router";
 import { apiGet, getEventPresence, followUser } from "../../src/utils/api";
+import { reverseGeocodeLabel } from "../../src/utils/geocode";
 import TimelineScrubber from "../../src/components/TimelineScrubber";
 import PreviewCard from "../../src/components/PreviewCard";
 
@@ -12,7 +13,7 @@ const COLORS = { bg: "#0A0A0A", surface: "#1A1A1A", blue: "#4D9FFF", text: "#FFF
 const DEFAULT_REGION = { latitude: 41.0082, longitude: 28.9784, latitudeDelta: 0.05, longitudeDelta: 0.05 };
 const CURRENT_USER = "demo-user";
 
-type Selected = { type: "event"; id: string; meta?: string; centroid?: { lat: number; lng: number } } | { type: "stream"; id: string; meta?: string } | null;
+type Selected = { type: "event"; id: string; meta?: string; centroid?: { lat: number; lng: number }; label?: string } | { type: "stream"; id: string; meta?: string } | null;
 
 export default function MapRoute() {
   const router = useRouter();
@@ -81,7 +82,13 @@ export default function MapRoute() {
 
   const onPressEvent = useCallback(async (id: string) => {
     const e = events.find((x) => x.id === id);
-    setSelected({ type: "event", id, meta: e ? `${e.stream_count} POVs` : undefined, centroid: e ? { lat: e.centroid_lat, lng: e.centroid_lng } : undefined });
+    const centroid = e ? { lat: e.centroid_lat, lng: e.centroid_lng } : undefined;
+    let label: string | undefined = undefined;
+    if (centroid) {
+      const l = await reverseGeocodeLabel(centroid.lat, centroid.lng);
+      if (l) label = l.split(",")[0];
+    }
+    setSelected({ type: "event", id, meta: e ? `${e.stream_count} POVs` : undefined, centroid, label });
     try {
       const detail = await apiGet<any>(`/api/events/${id}`);
       const streamers = (detail.streams || []).map((s: any) => s.user_id);
@@ -109,8 +116,14 @@ export default function MapRoute() {
     catch (e: any) { Alert.alert("Error", e?.message || "Failed to follow"); }
   }, [selected, eventStreamers]);
 
-  const locationLabel = useMemo(() => { if (selected && "centroid" in selected && selected.centroid) { return `${selected.centroid.lat.toFixed(5)}, ${selected.centroid.lng.toFixed(5)}`; } return undefined; }, [selected]);
   const presenceText = useMemo(() => { if (!presence) return undefined; if (presence.friends_watching > 0) return `${presence.friends_watching} friends watching`; return `${presence.watching_now} watching now`; }, [presence]);
+
+  const subtitle = useMemo(() => {
+    if (!selected || selected.type !== "event") return undefined;
+    if (selected.label) return selected.label;
+    if (selected.centroid) return `${selected.centroid.lat.toFixed(5)}, ${selected.centroid.lng.toFixed(5)}`;
+    return undefined;
+  }, [selected]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -129,7 +142,7 @@ export default function MapRoute() {
 
       {selected && selected.type === "event" && (
         <View style={styles.preview}>
-          <PreviewCard title="Event" subtitle={locationLabel} meta={selected.meta} presenceText={presenceText} primaryText="Open Event" followText="Follow" onPrimary={openSelected} onSecondary={() => { setSelected(null); clearPresencePoll(); }} onFollow={followSelectedEventStreamers} />
+          <PreviewCard title="Event" subtitle={subtitle} meta={selected.meta} presenceText={presenceText} primaryText="Open Event" followText="Follow" onPrimary={openSelected} onSecondary={() => { setSelected(null); clearPresencePoll(); }} onFollow={followSelectedEventStreamers} />
         </View>
       )}
 

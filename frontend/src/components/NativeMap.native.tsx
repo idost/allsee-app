@@ -5,8 +5,6 @@ import Constants from "expo-constants";
 import GlowPin from "./GlowPin";
 import ClusterMarker from "./ClusterMarker";
 
-const COLORS = { blue: "#4D9FFF", violet: "#9D4FF", amber: "#FFB84D" } as any;
-
 export type MapEvent = { id: string; centroid_lat: number; centroid_lng: number; stream_count: number; created_at: string; viewer_count_total?: number };
 export type MapStream = { id: string; user_id: string; lat: number; lng: number; viewer_count_peak?: number };
 export type Region = { latitude: number; longitude: number; latitudeDelta: number; longitudeDelta: number };

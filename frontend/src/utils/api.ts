@@ -35,13 +35,17 @@ export async function getFollowStatus(followerId: string, followingId: string) {
 }
 
 // Presence
-export async function presenceWatch(userId: string, eventId: string) {
-  return apiPost("/api/presence/watch", { user_id: userId, event_id: eventId });
-}
-export async function presenceLeave(userId: string, eventId: string) {
-  return apiPost("/api/presence/leave", { user_id: userId, event_id: eventId });
-}
+export async function presenceWatch(userId: string, eventId: string) { return apiPost("/api/presence/watch", { user_id: userId, event_id: eventId }); }
+export async function presenceLeave(userId: string, eventId: string) { return apiPost("/api/presence/leave", { user_id: userId, event_id: eventId }); }
 export async function getEventPresence(eventId: string, userId?: string) {
   const q = userId ? `?user_id=${encodeURIComponent(userId)}` : "";
   return apiGet<{ watching_now: number; friends_watching: number; friend_ids: string[] }>(`/api/events/${eventId}/presence${q}`);
+}
+
+// Streams helper
+export async function attachPlayback(streamId: string, playbackUrl: string) {
+  return apiPost(`/api/streams/${streamId}/attach_playback`, undefined, {
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: JSON.stringify({ playback_url: playbackUrl }) as any,
+  } as any);
 }
