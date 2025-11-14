@@ -120,6 +120,17 @@
       - working: true
         agent: "main"
         comment: "GET /api/events/range returns events in time window"
+  - task: "Livepeer Integration"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "COMPREHENSIVE LIVEPEER INTEGRATION TESTING COMPLETED: All 7 tests passed with 100% success rate. ✅ POST /api/streams creates streams with complete Livepeer credentials (rtmp_ingest_url, rtmp_stream_key, livepeer_stream_id, livepeer_playback_id). ✅ GET /api/streams/live includes livepeer_playback_id in responses. ✅ GET /api/streams/{id}/playback endpoint correctly constructs HLS URLs from livepeer_playback_id (https://livepeercdn.studio/hls/{playback_id}/index.m3u8). ✅ GET /api/events/{id} includes livepeer_playback_id in event streams. ✅ POST /api/webhooks/livepeer processes all webhook events (stream.started, stream.idle, recording.ready) successfully. Livepeer integration is production-ready."
 ## frontend:
   - task: "Event Viewer (multi-POV shell)"
     implemented: true
