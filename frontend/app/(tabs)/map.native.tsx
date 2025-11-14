@@ -3,7 +3,15 @@ import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity } from "rea
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
-import MapView, { Marker, Region } from "react-native-maps";
+// Note: Avoid static import of react-native-maps to keep web SSR safe.
+// We'll require it lazily inside the component.
+
+type Region = {
+  latitude: number;
+  longitude: number;
+  latitudeDelta: number;
+  longitudeDelta: number;
+};
 
 const COLORS = {
   bg: "#0A0A0A",
