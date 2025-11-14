@@ -550,6 +550,7 @@ async def get_event_detail(event_id: str):
             'id': d['id'], 'user_id': d['user_id'], 'lat': out_lat, 'lng': out_lng,
             'started_at': d['started_at'], 'ended_at': d.get('ended_at'), 'status': d.get('status', 'live'),
             'privacy_mode': d.get('privacy_mode', 'exact'), 'playback_url': d.get('playback_url'),
+            'livepeer_playback_id': d.get('livepeer_playback_id')
         })
     return {
         'event': {
