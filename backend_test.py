@@ -1,34 +1,30 @@
 #!/usr/bin/env python3
 """
-Backend API Testing Script for Allsee MVP
-Tests streams and events endpoints with clustering functionality
+Backend API Testing for Allsee MVP - Livepeer Integration
+Tests the new Livepeer integration endpoints and functionality.
 """
 
-import requests
+import asyncio
+import httpx
 import json
-import time
-from datetime import datetime
+import os
+from datetime import datetime, timedelta
 from typing import Dict, Any, Optional
 
-# Base URL from frontend/.env
-BASE_URL = "https://social-mapview.preview.emergentagent.com"
+# Test configuration
+BACKEND_URL = "https://social-mapview.preview.emergentagent.com/api"
+TEST_USER_ID = "demo-user"
+TEST_LOCATION = {
+    "lat": 41.0082,  # Istanbul, Turkey
+    "lng": 28.9784
+}
 
-class BackendTester:
+class LivepeerIntegrationTester:
     def __init__(self):
-        self.base_url = BASE_URL
-        self.session = requests.Session()
-        self.session.headers.update({
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-        })
-        
-        # Test data storage
-        self.stream_a_id = None
-        self.stream_b_id = None
-        self.event_id = None
-        
-        # Test results
-        self.results = []
+        self.client = httpx.AsyncClient(timeout=30.0)
+        self.test_results = []
+        self.created_streams = []
+        self.created_events = []
         
     def log_result(self, test_name: str, success: bool, details: str, response_data: Any = None):
         """Log test result"""
