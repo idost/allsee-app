@@ -6,6 +6,7 @@ import NativeMap from "../../src/components/NativeMap";
 import { useRouter } from "expo-router";
 import { apiGet } from "../../src/utils/api";
 import TimelineScrubber from "../../src/components/TimelineScrubber";
+import PreviewCard from "../../src/components/PreviewCard";
 
 const COLORS = {
   bg: "#0A0A0A",
@@ -30,6 +31,8 @@ function regionToBbox(region: { latitude: number; longitude: number; latitudeDel
 
 const DEFAULT_REGION = { latitude: 41.0082, longitude: 28.9784, latitudeDelta: 0.05, longitudeDelta: 0.05 };
 
+type Selected = { type: "event"; id: string; meta?: string } | { type: "stream"; id: string; meta?: string } | null;
+
 export default function MapRoute() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -39,6 +42,7 @@ export default function MapRoute() {
   const lastRegionRef = useRef(DEFAULT_REGION);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const [minutesOffset, setMinutesOffset] = useState(0); // 0 = LIVE
+  const [selected, setSelected] = useState<Selected>(null);
 
   const singles = useMemo(() => streams.filter((s) => !s.event_id), [streams]);
 
@@ -103,10 +107,21 @@ export default function MapRoute() {
   }, [fetchData]);
 
   const onPressEvent = useCallback((id: string) => {
-    router.push(`/event/${id}`);
-  }, [router]);
+    const e = events.find((x) => x.id === id);
+    setSelected({ type: "event", id, meta: e ? `${e.stream_count} POVs` : undefined });
+  }, [events]);
 
-  const onPressStream = useCallback((id: string) => {}, []);
+  const onPressStream = useCallback((id: string) => {
+    const s = singles.find((x) => x.id === id);
+    setSelected({ type: "stream", id, meta: s ? `@${s.user_id}` : undefined });
+  }, [singles]);
+
+  const openSelected = useCallback(() => {
+    if (!selected) return;
+    if (selected.type === "event") router.push(`/event/${selected.id}`);
+    // stream open action TBD (profile or single-viewer)
+    setSelected(null);
+  }, [router, selected]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -135,6 +150,19 @@ export default function MapRoute() {
         onPressStream={onPressStream}
       />
 
+      {selected && (
+        <View style={styles.preview}>
+          <PreviewCard
+            title={selected.type === "event" ? "Event" : "Live Stream"}
+            subtitle={selected.meta}
+            primaryText={selected.type === "event" ? "Open Event" : "Open"}
+            onPrimary={openSelected}
+            onSecondary={() => setSelected(null)}
+            secondaryText="Close"
+          />
+        </View>
+      )}
+
       <View style={styles.timeline}>
         <TimelineScrubber minutesOffset={minutesOffset} onChange={setMinutesOffset} />
       </View>
@@ -144,9 +172,10 @@ export default function MapRoute() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg },
-  header: { zIndex: 2, position: "absolute", top: 0, left: 0, right: 0, backgroundColor: "#00000066", paddingHorizontal: 16, paddingVertical: 10, flexDirection: "row", alignItems: "center", gap: 8 },
+  header: { zIndex: 3, position: "absolute", top: 0, left: 0, right: 0, backgroundColor: "#00000066", paddingHorizontal: 16, paddingVertical: 10, flexDirection: "row", alignItems: "center", gap: 8 },
   headerText: { color: COLORS.text, fontSize: 18, marginLeft: 8 },
   center: { position: "absolute", top: 48, left: 0, right: 0, alignItems: "center" },
   error: { color: COLORS.danger },
+  preview: { zIndex: 3, position: "absolute", left: 16, right: 16, bottom: 80 },
   timeline: { zIndex: 2, position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: "#00000066" },
 });

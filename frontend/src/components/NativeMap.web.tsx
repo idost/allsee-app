@@ -1,21 +1,31 @@
 import React from "react";
-import { View, Text, StyleSheet, ScrollView } from "react-native";
+import { View, Text, StyleSheet, ScrollView, Pressable } from "react-native";
 import type { MapEvent, MapStream } from "./NativeMap.native";
 
-export default function NativeMapWeb({ events, streams }: { events: MapEvent[]; streams: MapStream[] }) {
+export default function NativeMapWeb({
+  events,
+  streams,
+  onPressEvent,
+  onPressStream,
+}: {
+  events: MapEvent[];
+  streams: MapStream[];
+  onPressEvent?: (id: string) => void;
+  onPressStream?: (id: string) => void;
+}) {
   return (
     <View style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={{ padding: 16 }}>
         {events.map((e) => (
-          <View key={e.id} style={styles.card}>
+          <Pressable key={e.id} onPress={() => onPressEvent && onPressEvent(e.id)} style={styles.card}>
             <Text style={styles.title}>Event • {e.stream_count} POVs</Text>
             <Text style={styles.metaSmall}>Created: {new Date(e.created_at).toLocaleString()}</Text>
-          </View>
+          </Pressable>
         ))}
-        {streams.filter((s) => !s.id.includes("_event"))?.map((s) => (
-          <View key={s.id} style={styles.card}>
+        {streams.map((s) => (
+          <Pressable key={s.id} onPress={() => onPressStream && onPressStream(s.id)} style={styles.card}>
             <Text style={styles.title}>Single Stream • @{s.user_id}</Text>
-          </View>
+          </Pressable>
         ))}
         {events.length === 0 && streams.length === 0 && (
           <View style={styles.center}><Text style={styles.meta}>No live data yet</Text></View>
