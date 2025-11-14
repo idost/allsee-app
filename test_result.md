@@ -101,6 +101,22 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+## frontend:
+  - task: "Map tab with live pins & event clusters (web-safe)"
+    implemented: true
+    working: true
+    file: "/app/frontend/app/(tabs)/map.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "main"
+        comment: "Initial react-native-maps import caused web crash. Split into platform-specific components and web fallback list."
+      - working: true
+        agent: "main"
+        comment: "Web route /(tabs)/map loads successfully with list fallback; native map component isolated."
+
 ## user_problem_statement: "Build Allsee MVP: backend streams/events with clustering; basic Expo app shell; map-first later"
 ## backend:
   - task: "Streams API (create, list live, end)"
