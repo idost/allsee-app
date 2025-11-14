@@ -396,6 +396,7 @@ async def create_stream(payload: StreamCreate):
         'device_camera': payload.device_camera, 'playback_url': payload.playback_url,
         'livepeer_stream_id': livepeer_stream_id, 'livepeer_playback_id': livepeer_playback_id,
         'rtmp_ingest_url': rtmp_ingest_url, 'rtmp_stream_key': rtmp_stream_key,
+        'whip_ingest_url': whip_ingest_url,
     }
     await db.streams.insert_one(stream_doc)
     event_id = await assign_event_for_stream(stream_doc)
