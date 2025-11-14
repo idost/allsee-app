@@ -1,10 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import NativeMap from "../../src/components/NativeMap";
 import { useRouter } from "expo-router";
-import { apiGet } from "../../src/utils/api";
+import { apiGet, getEventPresence, followUser } from "../../src/utils/api";
 import TimelineScrubber from "../../src/components/TimelineScrubber";
 import PreviewCard from "../../src/components/PreviewCard";
 
@@ -17,21 +17,17 @@ const COLORS = {
   danger: "#FF4D4D",
 };
 
-function regionToBbox(region: { latitude: number; longitude: number; latitudeDelta: number; longitudeDelta: number; }) {
-  const ne = {
-    lat: region.latitude + region.latitudeDelta / 2,
-    lng: region.longitude + region.longitudeDelta / 2,
-  };
-  const sw = {
-    lat: region.latitude - region.latitudeDelta / 2,
-    lng: region.longitude - region.longitudeDelta / 2,
-  };
+function regionToBboxSafe(r: any) {
+  const ne = { lat: r.latitude + r.latitudeDelta / 2, lng: r.longitude + r.longitudeDelta / 2 };
+  const sw = { lat: r.latitude - r.latitudeDelta / 2, lng: r.longitude - r.longitudeDelta / 2 };
   return { ne: `${ne.lat},${ne.lng}`, sw: `${sw.lat},${sw.lng}` };
 }
 
 const DEFAULT_REGION = { latitude: 41.0082, longitude: 28.9784, latitudeDelta: 0.05, longitudeDelta: 0.05 };
 
-type Selected = { type: "event"; id: string; meta?: string } | { type: "stream"; id: string; meta?: string } | null;
+const CURRENT_USER = "demo-user";
+
+type Selected = { type: "event"; id: string; meta?: string; centroid?: { lat: number; lng: number } } | { type: "stream"; id: string; meta?: string } | null;
 
 export default function MapRouteNative() {
   const router = useRouter();
@@ -43,11 +39,13 @@ export default function MapRouteNative() {
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const [minutesOffset, setMinutesOffset] = useState(0);
   const [selected, setSelected] = useState<Selected>(null);
+  const [presence, setPresence] = useState<{ watching_now: number; friends_watching: number } | null>(null);
+  const [eventStreamers, setEventStreamers] = useState<string[]>([]);
 
   const singles = useMemo(() => streams.filter((s) => !s.event_id), [streams]);
 
   const fetchLive = useCallback(async (r = lastRegionRef.current) => {
-    const { ne, sw } = regionToBbox(r);
+    const { ne, sw } = regionToBboxSafe(r);
     const [ev, st] = await Promise.all([
       apiGet<any[]>(`/api/events/live?ne=${encodeURIComponent(ne)}&sw=${encodeURIComponent(sw)}`),
       apiGet<{ streams: any[] }>(`/api/streams/live?ne=${encodeURIComponent(ne)}&sw=${encodeURIComponent(sw)}`),
@@ -57,7 +55,7 @@ export default function MapRouteNative() {
   }, []);
 
   const fetchRange = useCallback(async (r = lastRegionRef.current) => {
-    const { ne, sw } = regionToBbox(r);
+    const { ne, sw } = regionToBboxSafe(r);
     const now = new Date();
     const focus = new Date(now.getTime() - minutesOffset * 60 * 1000);
     const from = new Date(focus.getTime() - 30 * 60 * 1000).toISOString();
@@ -106,14 +104,23 @@ export default function MapRouteNative() {
     fetchData(r).catch(() => {});
   }, [fetchData]);
 
-  const onPressEvent = useCallback((id: string) => {
+  const onPressEvent = useCallback(async (id: string) => {
     const e = events.find((x) => x.id === id);
-    setSelected({ type: "event", id, meta: e ? `${e.stream_count} POVs` : undefined });
+    setSelected({ type: "event", id, meta: e ? `${e.stream_count} POVs` : undefined, centroid: e ? { lat: e.centroid_lat, lng: e.centroid_lng } : undefined });
+    try {
+      const detail = await apiGet<any>(`/api/events/${id}`);
+      const streamers = (detail.streams || []).map((s: any) => s.user_id);
+      setEventStreamers(streamers);
+      const p = await getEventPresence(id, CURRENT_USER);
+      setPresence({ watching_now: p.watching_now, friends_watching: p.friends_watching });
+    } catch {}
   }, [events]);
 
   const onPressStream = useCallback((id: string) => {
     const s = singles.find((x) => x.id === id);
     setSelected({ type: "stream", id, meta: s ? `@${s.user_id}` : undefined });
+    setPresence(null);
+    setEventStreamers([]);
   }, [singles]);
 
   const openSelected = useCallback(() => {
@@ -121,6 +128,29 @@ export default function MapRouteNative() {
     if (selected.type === "event") router.push(`/event/${selected.id}`);
     setSelected(null);
   }, [router, selected]);
+
+  const followSelectedEventStreamers = useCallback(async () => {
+    if (!selected || selected.type !== "event" || !eventStreamers.length) return;
+    try {
+      await Promise.all(eventStreamers.map((uid) => followUser(CURRENT_USER, uid)));
+      Alert.alert("Followed", `You are now following ${eventStreamers.length} streamer(s)`);
+    } catch (e: any) {
+      Alert.alert("Error", e?.message || "Failed to follow");
+    }
+  }, [selected, eventStreamers]);
+
+  const locationLabel = useMemo(() => {
+    if (selected && "centroid" in selected && selected.centroid) {
+      return `${selected.centroid.lat.toFixed(5)}, ${selected.centroid.lng.toFixed(5)}`;
+    }
+    return undefined;
+  }, [selected]);
+
+  const presenceText = useMemo(() => {
+    if (!presence) return undefined;
+    if (presence.friends_watching > 0) return `${presence.friends_watching} friends watching`;
+    return `${presence.watching_now} watching now`;
+  }, [presence]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -149,15 +179,30 @@ export default function MapRouteNative() {
         onPressStream={onPressStream}
       />
 
-      {selected && (
+      {selected && selected.type === "event" && (
         <View style={styles.preview}>
           <PreviewCard
-            title={selected.type === "event" ? "Event" : "Live Stream"}
-            subtitle={selected.meta}
-            primaryText={selected.type === "event" ? "Open Event" : "Open"}
+            title="Event"
+            subtitle={locationLabel}
+            meta={selected.meta}
+            presenceText={presenceText}
+            primaryText="Open Event"
+            followText="Follow"
             onPrimary={openSelected}
             onSecondary={() => setSelected(null)}
-            secondaryText="Close"
+            onFollow={followSelectedEventStreamers}
+          />
+        </View>
+      )}
+
+      {selected && selected.type === "stream" && (
+        <View style={styles.preview}>
+          <PreviewCard
+            title="Live Stream"
+            subtitle={selected.meta}
+            primaryText="Open"
+            onPrimary={() => setSelected(null)}
+            onSecondary={() => setSelected(null)}
           />
         </View>
       )}
