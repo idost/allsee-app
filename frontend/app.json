@@ -64,7 +64,11 @@
       "typedRoutes": true
     },
     "extra": {
-      "router": {}
-    }
+      "router": {},
+      "eas": {
+        "projectId": "729a002d-c2fc-4b73-9216-5f6cf193e01e"
+      }
+    },
+    "owner": "ab.khodadad"
   }
 }
