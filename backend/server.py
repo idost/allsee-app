@@ -410,10 +410,34 @@ async def create_stream(payload: StreamCreate):
 
 @api_router.post('/streams/{stream_id}/attach_playback')
 async def attach_playback(stream_id: str, playback_url: str):
+    """Attach playback URL to stream (can be called by webhook or manually)"""
     res = await db.streams.update_one({ 'id': stream_id }, { '$set': { 'playback_url': playback_url }})
     if res.matched_count == 0:
         raise HTTPException(status_code=404, detail='Stream not found')
     return { 'ok': True }
+
+@api_router.get('/streams/{stream_id}/playback')
+async def get_stream_playback(stream_id: str):
+    """Get playback URL for a stream, constructing from Livepeer playback ID if needed"""
+    stream = await db.streams.find_one({ 'id': stream_id })
+    if not stream:
+        raise HTTPException(status_code=404, detail='Stream not found')
+    
+    playback_url = stream.get('playback_url')
+    
+    # If no playback URL but we have Livepeer playback ID, construct HLS URL
+    if not playback_url and stream.get('livepeer_playback_id'):
+        playback_id = stream['livepeer_playback_id']
+        playback_url = f"https://livepeercdn.studio/hls/{playback_id}/index.m3u8"
+        # Store it for future use
+        await db.streams.update_one({ 'id': stream_id }, { '$set': { 'playback_url': playback_url }})
+    
+    return {
+        'stream_id': stream_id,
+        'playback_url': playback_url,
+        'livepeer_playback_id': stream.get('livepeer_playback_id'),
+        'status': stream.get('status', 'ended')
+    }
 
 
 @api_router.get('/streams/live')
