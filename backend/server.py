@@ -60,6 +60,13 @@ def mask_location(lat: float, lng: float, mode: str) -> Tuple[float, float]:
     return lat + dlat, lng + dlng
 
 
+def parse_iso(dt_str: str) -> datetime:
+    try:
+        return datetime.fromisoformat(dt_str.replace('Z', '+00:00')).replace(tzinfo=None)
+    except Exception:
+        raise HTTPException(status_code=400, detail=f'Invalid datetime: {dt_str}')
+
+
 # -------------------- Models --------------------
 
 LocationPrivacy = Literal['exact', 'masked_100m', 'masked_1km']
@@ -325,6 +332,56 @@ async def get_live_events(
             raise HTTPException(status_code=400, detail='Invalid bbox params')
 
     docs = await db.events.find(query).to_list(500)
+    out = []
+    for e in docs:
+        out.append(EventOut(
+            id=e['id'],
+            centroid_lat=e['centroid_lat'],
+            centroid_lng=e['centroid_lng'],
+            radius_meters=e.get('radius_meters', 50),
+            created_at=e['created_at'],
+            ended_at=e.get('ended_at'),
+            viewer_count_total=e.get('viewer_count_total', 0),
+            stream_count=e.get('stream_count', 0),
+            hashtags=e.get('hashtags', []),
+            status=e.get('status', 'live')
+        ))
+    return out
+
+
+@api_router.get('/events/range', response_model=List[EventOut])
+async def get_events_range(
+    from_ts: Optional[str] = Query(None, alias='from', description="ISO8601 start time"),
+    to_ts: Optional[str] = Query(None, alias='to', description="ISO8601 end time"),
+    ne: Optional[str] = Query(None, description="NE corner as 'lat,lng'"),
+    sw: Optional[str] = Query(None, description="SW corner as 'lat,lng'"),
+):
+    now = datetime.utcnow()
+    if not from_ts and not to_ts:
+        # Default: last 1 hour
+        start = now - timedelta(hours=1)
+        end = now
+    else:
+        start = parse_iso(from_ts) if from_ts else now - timedelta(hours=1)
+        end = parse_iso(to_ts) if to_ts else now
+
+    if start > end:
+        raise HTTPException(status_code=400, detail='from must be <= to')
+
+    query = { 'created_at': { '$gte': start, '$lte': end } }
+
+    if ne and sw:
+        try:
+            ne_lat, ne_lng = [float(x) for x in ne.split(',')]
+            sw_lat, sw_lng = [float(x) for x in sw.split(',')]
+            query.update({
+                'centroid_lat': { '$gte': sw_lat, '$lte': ne_lat },
+                'centroid_lng': { '$gte': sw_lng, '$lte': ne_lng },
+            })
+        except Exception:
+            raise HTTPException(status_code=400, detail='Invalid bbox params')
+
+    docs = await db.events.find(query).sort('created_at', -1).to_list(1000)
     out = []
     for e in docs:
         out.append(EventOut(
