@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import { View, Text, StyleSheet, ActivityIndicator, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams } from "expo-router";
+import { apiGet } from "../../src/utils/api";
 
 const COLORS = {
   bg: "#0A0A0A",
@@ -23,9 +24,7 @@ export default function EventDetail() {
     try {
       setError(null);
       setLoading(true);
-      const res = await fetch(`/api/events/${id}`);
-      if (!res.ok) throw new Error(`Failed: ${res.status}`);
-      const data = await res.json();
+      const data = await apiGet<any>(`/api/events/${id}`);
       setEvent(data);
     } catch (e: any) {
       setError(e.message);

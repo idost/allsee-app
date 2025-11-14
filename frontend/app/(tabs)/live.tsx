@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } fr
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Location from "expo-location";
 import { Ionicons } from "@expo/vector-icons";
+import { apiPost } from "../../src/utils/api";
 
 const PRIVACY_OPTIONS = [
   { key: "exact", label: "Exact location" },
@@ -41,17 +42,12 @@ export default function LiveScreen() {
       setLoading(true);
       const { lat, lng } = await requestLocationAsync();
       const payload = { user_id: "demo-user", lat, lng, privacy_mode: privacy, device_camera: camera };
-      const res = await fetch(`/api/streams`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) throw new Error(`Failed: ${res.status}`);
-      const data = await res.json();
-      setActiveStream({ id: data.id, event_id: data.event_id, status: data.status });
+      const data = await apiPost<StreamResp>("/api/streams", payload);
+      setActiveStream({ id: data.id, event_id: (data as any).event_id, status: data.status });
       Alert.alert("Live!", `Stream started. ID: ${data.id}`);
     } catch (e: any) {
-      Alert.alert("Error", e.message ?? "Failed to start stream");
+      const msg = e?.message ? `Failed: ${e.message}` : "Failed to start stream";
+      Alert.alert("Error", msg);
     } finally {
       setLoading(false);
     }
@@ -61,12 +57,12 @@ export default function LiveScreen() {
     if (!activeStream) return;
     try {
       setLoading(true);
-      const res = await fetch(`/api/streams/${activeStream.id}/end`, { method: "POST" });
-      if (!res.ok) throw new Error(`Failed to end: ${res.status}`);
+      await apiPost(`/api/streams/${activeStream.id}/end`);
       setActiveStream(null);
       Alert.alert("Ended", "Stream ended successfully");
     } catch (e: any) {
-      Alert.alert("Error", e.message ?? "Failed to end stream");
+      const msg = e?.message ? `Failed to end: ${e.message}` : "Failed to end stream";
+      Alert.alert("Error", msg);
     } finally {
       setLoading(false);
     }

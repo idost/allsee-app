@@ -4,6 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import NativeMap from "../../src/components/NativeMap";
 import { useRouter } from "expo-router";
+import { apiGet } from "../../src/utils/api";
 
 const COLORS = {
   bg: "#0A0A0A",
@@ -41,14 +42,10 @@ export default function MapRoute() {
 
   const fetchData = useCallback(async (r = lastRegionRef.current) => {
     const { ne, sw } = regionToBbox(r);
-    const [evRes, stRes] = await Promise.all([
-      fetch(`/api/events/live?ne=${encodeURIComponent(ne)}&sw=${encodeURIComponent(sw)}`),
-      fetch(`/api/streams/live?ne=${encodeURIComponent(ne)}&sw=${encodeURIComponent(sw)}`),
+    const [ev, st] = await Promise.all([
+      apiGet<any[]>(`/api/events/live?ne=${encodeURIComponent(ne)}&sw=${encodeURIComponent(sw)}`),
+      apiGet<{ streams: any[] }>(`/api/streams/live?ne=${encodeURIComponent(ne)}&sw=${encodeURIComponent(sw)}`),
     ]);
-    if (!evRes.ok) throw new Error(`Events ${evRes.status}`);
-    if (!stRes.ok) throw new Error(`Streams ${stRes.status}`);
-    const ev = await evRes.json();
-    const st = await stRes.json();
     setEvents(ev);
     setStreams(st.streams ?? []);
   }, []);
@@ -81,9 +78,7 @@ export default function MapRoute() {
     router.push(`/event/${id}`);
   }, [router]);
 
-  const onPressStream = useCallback((id: string) => {
-    // In future, open streamer profile or single-stream viewer. For now, no-op.
-  }, []);
+  const onPressStream = useCallback((id: string) => {}, []);
 
   return (
     <SafeAreaView style={styles.container}>
