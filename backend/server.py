@@ -463,7 +463,7 @@ async def get_live_streams(
             'started_at': d['started_at'], 'ended_at': d.get('ended_at'),
             'viewer_count_peak': d.get('viewer_count_peak', 0), 'event_id': d.get('event_id'),
             'status': d.get('status', 'live'), 'privacy_mode': d.get('privacy_mode', 'exact'),
-            'playback_url': d.get('playback_url'),
+            'playback_url': d.get('playback_url'), 'livepeer_playback_id': d.get('livepeer_playback_id'),
         })
     return { 'streams': items }
 
