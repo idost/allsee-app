@@ -26,41 +26,20 @@ class LivepeerIntegrationTester:
         self.created_streams = []
         self.created_events = []
         
-    def log_result(self, test_name: str, success: bool, details: str, response_data: Any = None):
+    async def log_result(self, test_name: str, success: bool, details: str = "", data: Any = None):
         """Log test result"""
         result = {
-            'test': test_name,
-            'success': success,
-            'details': details,
-            'timestamp': datetime.now().isoformat(),
-            'response_data': response_data
+            "test": test_name,
+            "success": success,
+            "details": details,
+            "timestamp": datetime.now().isoformat(),
+            "data": data
         }
-        self.results.append(result)
+        self.test_results.append(result)
         status = "✅ PASS" if success else "❌ FAIL"
         print(f"{status} {test_name}: {details}")
-        if response_data and not success:
-            print(f"   Response: {json.dumps(response_data, indent=2, default=str)}")
-    
-    def make_request(self, method: str, endpoint: str, data: Dict = None, params: Dict = None) -> tuple:
-        """Make HTTP request and return (success, response_data, status_code)"""
-        url = f"{self.base_url}{endpoint}"
-        try:
-            if method.upper() == 'GET':
-                response = self.session.get(url, params=params, timeout=30)
-            elif method.upper() == 'POST':
-                response = self.session.post(url, json=data, params=params, timeout=30)
-            else:
-                return False, {"error": f"Unsupported method: {method}"}, 0
-                
-            try:
-                response_data = response.json()
-            except:
-                response_data = {"raw_response": response.text}
-                
-            return response.status_code < 400, response_data, response.status_code
-            
-        except requests.exceptions.RequestException as e:
-            return False, {"error": str(e)}, 0
+        if data and not success:
+            print(f"   Data: {json.dumps(data, indent=2, default=str)}")
     
     def test_1_sanity_check(self):
         """Test 1: Sanity check - GET /api/ should return Hello World"""
