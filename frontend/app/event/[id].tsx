@@ -35,7 +35,12 @@ export default function EventDetail() {
       setLoading(true);
       const d = await apiGet<any>(`/api/events/${id}`);
       setData(d);
-      setEvent(id!, (d.streams || []).map((s: any) => ({ id: s.id, user_id: s.user_id, playback_url: s.playback_url })));
+      setEvent(id!, (d.streams || []).map((s: any) => ({ 
+        id: s.id, 
+        user_id: s.user_id, 
+        playback_url: s.playback_url,
+        livepeer_playback_id: s.livepeer_playback_id
+      })));
       try {
         const p = await getEventPresence(String(id), CURRENT_USER_ID);
         setPresence({ watching_now: p.watching_now, friends_watching: p.friends_watching });
