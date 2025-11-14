@@ -105,26 +105,32 @@
 ## backend:
   - task: "Streams API (create, list live, end)"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: false
         agent: "main"
         comment: "Initial implementation of /api/streams, /api/streams/live, /api/streams/{id}/end with masking and bbox filtering."
+      - working: true
+        agent: "testing"
+        comment: "COMPREHENSIVE TESTING COMPLETED: All streams API endpoints working perfectly. ✅ POST /api/streams creates streams with proper privacy masking (exact coordinates preserved for 'exact' mode, properly masked for 'masked_100m'). ✅ GET /api/streams/live correctly filters by bbox and applies masking per privacy mode. ✅ POST /api/streams/{id}/end successfully ends streams. All responses include proper ISO date formatting."
   - task: "Event clustering + Events API"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: false
         agent: "main"
         comment: "Implemented auto-cluster within 50m & 10min window; added /api/events/live and /api/events/{id}."
+      - working: true
+        agent: "testing"
+        comment: "COMPREHENSIVE TESTING COMPLETED: Event clustering and Events API working flawlessly. ✅ Auto-clustering triggers correctly when streams are created within 50m and 10min window. ✅ GET /api/events/live returns live events with proper stream counts. ✅ GET /api/events/{id} provides detailed event info with associated streams and proper coordinate masking. ✅ Event status automatically updates to 'ended' when all associated streams end. ✅ Ended events are correctly removed from live events list."
 ## frontend:
   - task: "Index screen placeholder"
     implemented: true
