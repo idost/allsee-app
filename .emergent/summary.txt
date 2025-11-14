@@ -1,0 +1,76 @@
+<analysis>
+The trajectory outlines the development of a React Native (Expo) application named Allsee, a real-time, map-based social network. The process began with a comprehensive product requirements document. The AI engineer first established a FastAPI backend with endpoints for creating streams and events. The initial frontend work involved setting up Expo Router with a tabbed layout for the map, a Go Live screen, and a profile.
+
+A major challenge arose when implementing the map using , which caused the web preview to crash due to native-only module imports. This was resolved by creating platform-specific files ( and ), a critical architectural decision that allowed development to proceed with a functional web fallback. Another key issue was a 404 error on API calls from the device, fixed by implementing a utility to construct absolute API URLs from an environment variable.
+
+Subsequent work focused on adding core features: a timeline scrubber for replaying past events, a backend endpoint to support this time-based querying, a  for streams/events, and the scaffolding for a multi-POV . The social graph was built out with backend endpoints for following users and tracking presence (who is watching an event). Most recently, the engineer added a reverse geocoding service to display human-readable location names and prepared the system for integrating a video streaming service like Livepeer.
+</analysis>
+
+<product_requirements>
+Allsee is a real-time, map-based social network designed to connect people through shared, witnessed experiences rather than curated content. The core principle is truth through triangulation, using multiple points-of-view (POVs) of the same event to create a verifiable reality.
+
+The Minimum Viable Product (MVP) requirements include:
+1.  **Go Live:** Users can start a live video stream in two taps, which appears as a pin on a global map.
+2.  **Real-Time Map:** The primary interface is a dark-themed map showing live streams as pulsing pins. Multiple nearby streams are automatically clustered into Events.
+3.  **Event Clustering:** A backend algorithm groups streams based on spatial (within 50m) and temporal (within 10 mins) proximity.
+4.  **Multi-POV Viewer:** Tapping an event cluster opens a viewer where users can seamlessly switch between different streamers' camera angles.
+5.  **Replay Mode:** A timeline scrubber allows users to navigate back up to 24 hours to watch recordings of past events, complete with synchronized chat and multi-POV switching.
+6.  **Social Layer:** Users can follow streamers, and the UI should indicate friend presence (e.g., 2 friends are watching).
+
+The app's design philosophy is map-first, live-first, emphasizing a fast, frictionless, and human-centric experience.
+</product_requirements>
+
+<key_technical_concepts>
+- **React Native (Expo):** Framework for cross-platform mobile app development.
+- **Expo Router:** File-system-based routing for navigating between screens.
+- **Platform-Specific Code:** Using  and  extensions to isolate native-only code (like ) from the web build, preventing crashes.
+- **FastAPI:** Python web framework for building the backend API.
+- **Zustand:** A lightweight state management library for managing global UI state, such as the active event in the viewer.
+- **Reverse Geocoding:** Converting geographic coordinates (latitude, longitude) into a human-readable address, implemented via an API call to OpenStreetMap (Nominatim).
+</key_technical_concepts>
+
+<code_architecture>
+The project is a monorepo with a  (React Native/Expo) and a  (FastAPI) directory.
+
+
+
+- ****
+    - **Importance:** This file contains the entire backend logic using FastAPI. It defines all data models and API endpoints for users, streams, events, presence, follows, and geocoding.
+    - **Changes:** It was created from scratch and incrementally updated to add endpoints like , ,  (for the timeline), , and most recently,  and .
+
+- ****
+    - **Importance:** This is the main screen of the application, responsible for displaying the map or a list fallback. It fetches live and historical data based on the timeline scrubber.
+    - **Changes:** Initially a simple file, it was refactored to handle data fetching and render either  or  based on the platform, solving the web-crash issue. It now integrates the  and  components.
+
+- ****
+    - **Importance:** This component encapsulates the  library, isolating the native-only dependency. It is responsible for rendering the map view, markers, and clusters on iOS and Android.
+    - **Changes:** Created to solve the web crash. It dynamically renders  and  components based on data passed from . It contains a check to prevent it from running in Expo Go, where it can be unstable without a Dev Build.
+
+- ****
+    - **Importance:** This is the dynamic route for the Multi-POV Event Viewer. It displays the main video, a strip of available POVs, and social interaction elements.
+    - **Changes:** Initially a placeholder, it was built out to include a video player (now ), a POV switcher strip that uses a Zustand store (), and buttons for following streamers. It also sends presence pings to the backend.
+
+- ****
+    - **Importance:** A critical utility that centralizes API logic and resolves the backend URL. It ensures that all  calls from the frontend correctly target the preview server, whether on web or a native device.
+    - **Changes:** Created to fix 404 errors that occurred when API calls used relative paths on native devices. It reads the  from the environment.
+</code_architecture>
+
+<pending_tasks>
+- **Full Livepeer Integration:** Wire up a real video streaming service. This involves using the  hook to save stream URLs from Livepeer webhooks for live playback and replay.
+- **Friend Presence Badges:** Implement UI elements on the map pins and preview cards to visually indicate when a user's friends are live or watching a specific event.
+- **Create a Dev Build:** Document and potentially execute the process for creating an Expo Dev Build. This is necessary to fully test  functionality on a native device, as it is currently disabled in the Expo Go preview.
+</pending_tasks>
+
+<current_work>
+The most recent work focused on enhancing the map's data richness and preparing for full video integration.
+
+A key feature just delivered is **reverse geocoding**. A new backend endpoint () was created using OpenStreetMap's Nominatim service, complete with a simple caching mechanism in the database. On the frontend, the  component on the map screen was updated to call this endpoint, so it now displays a human-readable location (e.g., Taksim Square, Istanbul) instead of raw coordinates. This significantly improves the user experience.
+
+In parallel, the backend was prepared for integrating a live streaming provider. A new endpoint () was added. This allows an external service (like Livepeer, via a webhook) to post-facto add a  to a stream record, which is essential for enabling the replay feature.
+
+The frontend  was also future-proofed by migrating from the deprecated  to the newer  component for handling video playback. The UI for the viewer, including the per-POV follow button and presence chip, is in place and ready for real stream data.
+</current_work>
+
+<optional_next_step>
+Continue implementing the planned features by adding friend presence badges to the map pins and preview card. This involves fetching social graph data and rendering the corresponding UI indicators.
+</optional_next_step>

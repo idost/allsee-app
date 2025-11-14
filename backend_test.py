@@ -11,7 +11,7 @@ from datetime import datetime
 from typing import Dict, Any, Optional
 
 # Base URL from frontend/.env
-BASE_URL = "https://witnesstogether.preview.emergentagent.com"
+BASE_URL = "https://social-mapview.preview.emergentagent.com"
 
 class BackendTester:
     def __init__(self):
