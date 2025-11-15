@@ -15,6 +15,15 @@
         "buildType": "apk",
         "gradleCommand": ":app:assembleDebug"
       }
+    },
+    "production": {
+      "node": "20.19.4",
+      "ios": {
+        "simulator": false
+      },
+      "android": {
+        "buildType": "apk"
+      }
     }
   }
 }
