@@ -8,18 +8,12 @@
       "developmentClient": true,
       "distribution": "internal",
       "node": "20.19.4",
-      "android": {
-        "buildType": "apk",
-        "gradleCommand": ":app:assembleDebug",
-        "credentialsSource": "local"
+      "ios": {
+        "simulator": false
       },
-      "credentialsSource": "local"
-    },
-    "production": {
-      "node": "20.19.4",
       "android": {
         "buildType": "apk",
-        "credentialsSource": "local"
+        "gradleCommand": ":app:assembleDebug"
       }
     }
   }
