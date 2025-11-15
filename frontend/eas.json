@@ -10,8 +10,10 @@
       "node": "20.19.4",
       "android": {
         "buildType": "apk",
-        "gradleCommand": ":app:assembleDebug"
-      }
+        "gradleCommand": ":app:assembleDebug",
+        "credentialsSource": "local"
+      },
+      "credentialsSource": "local"
     },
     "production": {
       "node": "20.19.4",
