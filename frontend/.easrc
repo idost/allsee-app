@@ -1,0 +1,8 @@
+{
+  "cli": {
+    "promptToConfigurePushNotifications": false
+  },
+  "build": {
+    "defaultProfile": "development"
+  }
+}
