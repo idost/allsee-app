@@ -14,7 +14,8 @@
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "We use your location to show nearby live events on the map.",
         "NSCameraUsageDescription": "We need camera access for live streaming.",
-        "NSMicrophoneUsageDescription": "We need microphone access for live streaming audio."
+        "NSMicrophoneUsageDescription": "We need microphone access for live streaming audio.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
